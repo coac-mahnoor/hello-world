@@ -13,12 +13,18 @@ app.post('/deploy', async (req, res) => {
         const applicationName = herokuApplication.name;
         const applicationURL= herokuApplication.web_url || '';
         if (applicationName && applicationURL) {
-            exec(`docker login https://docker.pkg.github.com -u coac-mahnoor --password-stdin ${process.env.GITHUB_AUTH_TOKEN}`);
-            exec(`docker pull ${gitPkgRepo}`);
-            exec(`docker login registry.heroku.com -u coac-mahnoor --password ${process.env.HEROKU_API_TOKEN}`);
-            exec(`docker tag ${gitPkgRepo} registry.heroku.com/${applicationName}/web`);
-            exec(`docker push registry.heroku.com/${applicationName}/web`);
-            return res.send(applicationURL);
+            return new Promise((resolve, reject) => {
+                exec(`docker login https://docker.pkg.github.com -u coac-mahnoor --password-stdin ${process.env.GITHUB_AUTH_TOKEN}`);
+                exec(`docker pull ${gitPkgRepo}`);
+                exec(`docker login registry.heroku.com -u coac-mahnoor --password ${process.env.HEROKU_API_TOKEN}`);
+                exec(`docker tag ${gitPkgRepo} registry.heroku.com/${applicationName}/web`);
+                exec(`docker push registry.heroku.com/${applicationName}/web`, (error, stdout, stderr) => {
+                 if (error) {
+                  reject(error)
+                 }
+                 resolve(stdout? applicationURL : stderr);
+                });
+               });
         }
     } catch (error) {
         console.log(error);
